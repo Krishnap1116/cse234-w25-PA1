@@ -218,8 +218,8 @@ def train_model():
 
     # - Set up the training settings.
     num_epochs = 40
-    batch_size = 50
-    lr = 0.02
+    batch_size = 25
+    lr = 0.05
 
     # TODO: Define the forward graph.
     X = ad.Variable(name="X")
