@@ -166,10 +166,6 @@ def sgd_epoch(
        
         forward  = f_run_model(model_weights,X_batch,y_batch)
         logits, loss, *grads = forward
-        # for i in grads:
-        #     print('i',i.shape)
-        # for i in model_weights[6:]:
-        #     print(i.shape)
         # Update weights and biases
         # TODO: Your code here
         # Hint: You can update the tensor using something like below:
@@ -179,9 +175,7 @@ def sgd_epoch(
             weight -= lr*(grad.sum(dim=0))
         for weight, grad in zip(model_weights[6:], grads[6:]):
             weight-=lr*((grad.sum(dim=(0,1))))
-        # for i, (weight, grad) in enumerate(zip(model_weights[-1], grads)):
-        #     print('g',grad.shape)
-        #     weight-=lr*((grad.sum(dim=(0,1))))
+       
 
         
 
@@ -292,8 +286,6 @@ def train_model():
         It returns the logits, loss, and gradients for model weights.
         """
         W_Q1, W_K1, W_V1, W_O1, W_11, W_21, b_11, b_21 = model_weights
-        # X_batch=torch.tensor(X_batch, dtype=torch.float64)
-        # y_batch=torch.tensor(y_batch, dtype=torch.float64)
         result = evaluator.run(
             input_values={
                 # TODO: Fill in the mapping from variable to tensor
@@ -325,7 +317,6 @@ def train_model():
             if start_idx + batch_size> num_examples:continue
             end_idx = min(start_idx + batch_size, num_examples)
             X_batch = X_val[start_idx:end_idx, :max_len]
-            # X_batch = torch.tensor(X_batch)
             W_Q_val1,W_K_val1,W_V_val1,W_O_val1,W_1_val1,W_2_val1,b_1_val1,b_2_val1=model_weights
             logits = test_evaluator.run({
                 # TODO: Fill in the mapping from variable to tensor
@@ -338,8 +329,6 @@ def train_model():
                 W_2: W_2_val1,
                 b_1: b_1_val1,
                 b_2: b_2_val1
-
-
             })
             all_logits.append(logits[0])
         # Concatenate all logits and return the predicted classes

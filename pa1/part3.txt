@@ -1,4 +1,5 @@
-Fused operators combine many tasks into a one kernel making it to reduce the overhead. They are useful in hifh performance computing like machine learning
-and deep learning. This makes it easy to transfer the memory and helps in faster execution of tasks.Fused operations perform computations 
-in parallel and store the intermediate values which will be helpful for operations that need huge memory bandwidth. For Future improvements for the 
-operators can be using GPU and vectorization to make them run faster.
+Fused operators combine many tasks into one kernel which helps in reducing the overhead. They are useful for high performance computing like machine learning
+and deep learning. Fused operators makes it easy to transfer the memory and helps in faster execution of tasks by minimizing the number of memory reads and number of memory writes. Fused operations perform computations 
+in parallel and store the intermediate values which will be helpful in faster completion of operations that need huge memory bandwidth. By combining larger calculations
+like matrix multiplication and layernorm they takes less memory, as it avoids the need for storing the results of intermediate matrix values
+, it reduces the memory bandwidth and speeds up the computations. For Future improvements for the operators we can use GPU and vectorization to make them run faster.

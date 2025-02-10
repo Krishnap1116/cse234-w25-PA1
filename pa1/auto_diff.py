@@ -372,7 +372,6 @@ class ExpandAsOp3d(Op):
         """Return the broadcasted tensor."""
         assert len(input_values) == 2
         input_tensor, target_tensor = input_values
-        # print('expand_op',input_tensor.shape, target_tensor.shape)
         return input_tensor.unsqueeze(1).expand_as(target_tensor)
 
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
@@ -461,14 +460,6 @@ class DivOp(Op):
         """Given gradient of division node, return partial adjoint to each input."""
         """TODO: your code here"""
         input=node.inputs
-        # x1=mul(output_grad,input[0])
-        # x2=mul(input[1],input[1])
-        # denom=div(x1,x2)
-        # denom=mul_by_const(denom,-1)
-        # nume=div(output_grad,input[1])
-
-        # return [nume,denom]
-        
         return[output_grad/input[1],mul_by_const((output_grad*input[0])/(input[1]*input[1]),-1)]
 
 class DivByConstOp(Op):
@@ -666,28 +657,6 @@ class SoftmaxOp(Op):
         """Return softmax of input along specified dimension."""
         assert len(input_values) == 1
         """TODO: your code here"""
-        # denom=torch.exp(sum(input_values))
-        
-        # print(input_values[0].shape)
-        # print(node.attrs['dim'])
-        # x=input_values[0]
-        # rows=input_values[0].shape[0]
-        # cols=input_values[0].shape[1]
-        # total=[]
-        # for i in range(rows):
-        #     temp=x[i]
-        #     # print(temp)
-        #     sum1=0
-        #     for i in temp:
-        #         sum1+= torch.exp(i)
-        #     total.append(sum1)
-        # # print(total)
-
-        # for i in range(rows):
-        #     for j in range(cols):
-        #         input_values[0][i][j]=torch.exp(input_values[0][i][j])/total[i]
-        # return input_values[0]
-   
         # for i in range(len(input_values[0])):
         #     dim=node.attrs['dim']
         #     nume=torch.exp(input_values[0][i])
@@ -827,8 +796,6 @@ class PowerOp(Op):
         """TODO: your code here"""
         x=input_values[0]
         y=node.attrs['exponent']
-        # for  i in x:
-        #     i=i**y
         return torch.pow(x,y)
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """TODO: your code here"""
@@ -957,36 +924,24 @@ class Evaluator:
             The list of values for nodes in `eval_nodes` field.
         """
         """TODO: your code here"""
-
-        # print(self.eval_nodes)
-        # print(input_values)
         
         values={}
         order=topological_sort(self.eval_nodes)
-        # print(order)
         for i in order:
             if isinstance(i, Node):
                 if i not in input_values:
                     results=[]
                     for j in i.inputs:
-                        
-                        # print(i)
-                        # print(i.inputs)
-                        # print(j)
                         if j not in input_values :
                             results.append(values[j])
-                            # print(results)
                         else:
                             results.append(input_values[j] )
-                            # print(results)
-                    # print(values)
                     if i.op!=placeholder:
                         values[i] = i.op.compute(i, results)
                 else:
                     values[i]=input_values[i]
-            else:  # i is a Tensor
+            else:  
                 values[i] = i
-        # print(values)
         out=[]
         for i in self.eval_nodes:
             out.append(values[i])
@@ -1017,40 +972,24 @@ def gradients(output_node: Node, nodes: List[Node]) -> List[Node]:
         A list of gradient nodes, one for each input nodes respectively.
     """
     """TODO: your code here"""
-    # print(output_node)
-    # print(nodes)
+ 
     
     output_values = {}
     x1=nodes[0]
     x2=nodes[1]
-    # print('out',output_node)
-    # Initialize the gradient for the output node as 1
-    output_values[output_node] = ones_like(output_node)  # Gradient of output w.r.t itself is 1
-    # print(output_values)
+    output_values[output_node] = ones_like(output_node)  
     order=topological_sort(output_node)
     order1=order[::-1]
-    # print(order1)
     for i in order1:
         if i not in output_values:
             continue
         if i.op!=placeholder:
             grad=output_values[i]
-            # print(grad)
-            # print('op',i.op)
             input=i.op.gradient(i,grad)
-            # print('input',input)
-            # print('i inputs',i.inputs)
             for x, ingrad in zip(i.inputs,input):
-                # print('x',x)
-                # print('ingrad',ingrad)
                 if x not in output_values:
                     output_values[x]=ingrad
-                    # print(output_values)
                 else:
                     output_values[x]=add(output_values[x],ingrad)
-                    # print(add(output_values[x],ingrad))
-        # for i in nodes:
-        #     if i in output_values:
-        #         output_values[i] = sum_op(output_values[i], dim=0)
     return [ output_values.get(node,zeros_like(node)) for node in nodes]
 
