@@ -1,3 +1,5 @@
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 import functools
 from typing import Callable, Tuple, List
 
@@ -35,6 +37,25 @@ def transformer(X: ad.Node, nodes: List[ad.Node],
     """
 
     """TODO: Your code here"""
+    W_Q, W_K, W_V, W_O, W_1, W_2, b_1, b_2 = nodes  
+    Q=ad.matmul(X,W_Q)
+    K=ad.matmul(X,W_K)
+    V=ad.matmul(X,W_V)
+    attention_numerator=ad.matmul(Q,ad.transpose(K,dim0=-2,dim1=-1))
+    attention_norm=ad.div_by_const(attention_numerator,model_dim**0.5)
+    A=ad.softmax(attention_norm,dim=-1)
+    attention=ad.matmul(A,V)
+    attention1 = ad.matmul(attention, W_O)
+    attention_norm1=ad.layernorm(attention1,normalized_shape=[model_dim],eps=eps)
+    layer1=ad.add(ad.matmul(attention_norm1,W_1),b_1)
+    hidden=ad.relu(layer1)
+    layer2=ad.add(ad.matmul(hidden,W_2),b_2)
+    layer_norm=ad.layernorm(layer2,normalized_shape=[num_classes],eps=eps)
+    avg_seq=ad.sum_op(layer_norm,dim=1,keepdim=False)
+    avg_output=ad.div_by_const(avg_seq,seq_length)
+
+    
+    return avg_output
 
 
 def softmax_loss(Z: ad.Node, y_one_hot: ad.Node, batch_size: int) -> ad.Node:
@@ -69,6 +90,12 @@ def softmax_loss(Z: ad.Node, y_one_hot: ad.Node, batch_size: int) -> ad.Node:
     Try to think about why our softmax loss may need the batch size.
     """
     """TODO: Your code here"""
+    x=ad.softmax(Z,dim=-1)
+  
+    pred = ad.log(x)
+    loss = ad.sum_op(ad.mul(y_one_hot, pred), dim=1)
+    loss_avg = ad.mul_by_const(loss, -1.0 / batch_size) 
+    return loss_avg
 
 
 
@@ -125,7 +152,7 @@ def sgd_epoch(
     num_examples = X.shape[0]
     num_batches = (num_examples + batch_size - 1) // batch_size  # Compute the number of batches
     total_loss = 0.0
-
+   
     for i in range(num_batches):
         # Get the mini-batch data
         start_idx = i * batch_size
@@ -136,20 +163,25 @@ def sgd_epoch(
         
         # Compute forward and backward passes
         # TODO: Your code here
-
+       
+        forward  = f_run_model(model_weights, X_batch, y_batch)
+        logits, loss, *grads = forward
         
         # Update weights and biases
         # TODO: Your code here
         # Hint: You can update the tensor using something like below:
         # W_Q -= lr * grad_W_Q.sum(dim=0)
+        for i, (weight, grad) in enumerate(zip(model_weights, grads)):
+            weight -= lr*grad
 
         # Accumulate the loss
         # TODO: Your code here
-
+        total_loss += loss
 
     # Compute the average loss
     
     average_loss = total_loss / num_examples
+
     print('Avg_loss:', average_loss)
 
     # TODO: Your code here
@@ -171,24 +203,35 @@ def train_model():
     seq_length = max_len  # Number of rows in the MNIST image
     num_classes = 10 #
     model_dim = 128 #
-    eps = 1e-5 
+    eps = 1e-5
 
     # - Set up the training settings.
-    num_epochs = 20
+    num_epochs = 40
     batch_size = 50
-    lr = 0.02
+    lr = 0.001
 
     # TODO: Define the forward graph.
-
-    y_predict: ad.Node = ... # TODO: The output of the forward pass
+    X = ad.Variable(name="X")
     y_groundtruth = ad.Variable(name="y")
+    W_Q = ad.Variable(name="W_Q")
+    W_K = ad.Variable(name="W_K")
+    W_V = ad.Variable(name="W_V")
+    W_O = ad.Variable(name="W_O")
+    W_1 = ad.Variable(name="W_1")
+    W_2 = ad.Variable(name="W_2")
+    b_1 = ad.Variable(name="b_1")
+    b_2 = ad.Variable(name="b_2")
+
+    nodes = [W_Q, W_K, W_V, W_O, W_1, W_2, b_1, b_2]
+
+
+    y_predict: ad.Node = transformer(X, nodes, model_dim, seq_length, eps, batch_size, num_classes) # TODO: The output of the forward pass
     loss: ad.Node = softmax_loss(y_predict, y_groundtruth, batch_size)
     
     # TODO: Construct the backward graph.
-    
 
     # TODO: Create the evaluator.
-    grads: List[ad.Node] = ... # TODO: Define the gradient nodes here
+    grads: List[ad.Node] = ad.gradients(loss, nodes) # TODO: Define the gradient nodes here
     evaluator = ad.Evaluator([y_predict, loss, *grads])
     test_evaluator = ad.Evaluator([y_predict])
 
@@ -232,17 +275,34 @@ def train_model():
     b_1_val = np.random.uniform(-stdv, stdv, (model_dim,))
     b_2_val = np.random.uniform(-stdv, stdv, (num_classes,))
 
-    def f_run_model(model_weights):
+    
+    def f_run_model(model_weights,X_batch,y_batch):
         """The function to compute the forward and backward graph.
         It returns the logits, loss, and gradients for model weights.
         """
+        W_Q1, W_K1, W_V1, W_O1, W_11, W_21, b_11, b_21 = model_weights
+        X_batch=torch.tensor(X_batch, dtype=torch.float64)
+        y_batch=torch.tensor(y_batch, dtype=torch.float64)
         result = evaluator.run(
             input_values={
                 # TODO: Fill in the mapping from variable to tensor
-
+                X: X_batch,
+                y_groundtruth:y_batch ,
+                W_Q: W_Q1,
+                W_K: W_K1,
+                W_V: W_V1,
+                W_O: W_O1, 
+                W_1: W_11, 
+                W_2: W_21, 
+                b_1: b_11,
+                b_2: b_21
 
             }
         )
+        logits, loss, *grads = result
+        grads = [grad if isinstance(grad, np.ndarray) else grad.numpy() for grad in grads]
+        result = [result[0], result[1], *grads]
+
         return result
 
     def f_eval_model(X_val, model_weights: List[torch.Tensor]):
@@ -257,8 +317,19 @@ def train_model():
             if start_idx + batch_size> num_examples:continue
             end_idx = min(start_idx + batch_size, num_examples)
             X_batch = X_val[start_idx:end_idx, :max_len]
+            X_batch = torch.tensor(X_batch)
+            W_Q_val1,W_K_val1,W_V_val1,W_O_val1,W_1_val1,W_2_val1,b_1_val1,b_2_val1=model_weights
             logits = test_evaluator.run({
                 # TODO: Fill in the mapping from variable to tensor
+                X: X_batch,
+                W_Q: W_Q_val1,
+                W_K: W_K_val1,
+                W_V: W_V_val1,
+                W_O: W_O_val1,
+                W_1: W_1_val1,
+                W_2: W_2_val1,
+                b_1: b_1_val1,
+                b_2: b_2_val1
 
 
             })
@@ -270,7 +341,12 @@ def train_model():
 
     # Train the model.
     X_train, X_test, y_train, y_test= torch.tensor(X_train), torch.tensor(X_test), torch.DoubleTensor(y_train), torch.DoubleTensor(y_test)
-    model_weights: List[torch.Tensor] = [] # TODO: Initialize the model weights here
+    model_weights: List[torch.Tensor] =  [torch.tensor(W_Q_val), torch.tensor(W_K_val),
+                     torch.tensor(W_V_val), torch.tensor(W_O_val),
+                     torch.tensor(W_1_val), torch.tensor(W_2_val),
+                     torch.tensor(b_1_val),
+                     torch.tensor(b_2_val)] # TODO: Initialize the model weights here
+    
     for epoch in range(num_epochs):
         X_train, y_train = shuffle(X_train, y_train)
         model_weights, loss_val = sgd_epoch(
@@ -278,6 +354,7 @@ def train_model():
         )
 
         # Evaluate the model on the test data.
+        
         predict_label = f_eval_model(X_test, model_weights)
         print(
             f"Epoch {epoch}: test accuracy = {np.mean(predict_label== y_test.numpy())}, "
