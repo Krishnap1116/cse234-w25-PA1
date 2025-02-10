@@ -164,15 +164,26 @@ def sgd_epoch(
         # Compute forward and backward passes
         # TODO: Your code here
        
-        forward  = f_run_model(model_weights, X_batch, y_batch)
+        forward  = f_run_model(model_weights,X_batch,y_batch)
         logits, loss, *grads = forward
-        
+        # for i in grads:
+        #     print('i',i.shape)
+        # for i in model_weights[6:]:
+        #     print(i.shape)
         # Update weights and biases
         # TODO: Your code here
         # Hint: You can update the tensor using something like below:
         # W_Q -= lr * grad_W_Q.sum(dim=0)
-        for i, (weight, grad) in enumerate(zip(model_weights, grads)):
-            weight -= lr*grad
+      
+        for weight, grad in (zip(model_weights[:6], grads[:6])):
+            weight -= lr*(grad.sum(dim=0))
+        for weight, grad in zip(model_weights[6:], grads[6:]):
+            weight-=lr*((grad.sum(dim=(0,1))))
+        # for i, (weight, grad) in enumerate(zip(model_weights[-1], grads)):
+        #     print('g',grad.shape)
+        #     weight-=lr*((grad.sum(dim=(0,1))))
+
+        
 
         # Accumulate the loss
         # TODO: Your code here
@@ -208,7 +219,7 @@ def train_model():
     # - Set up the training settings.
     num_epochs = 40
     batch_size = 50
-    lr = 0.001
+    lr = 0.02
 
     # TODO: Define the forward graph.
     X = ad.Variable(name="X")
@@ -299,9 +310,6 @@ def train_model():
 
             }
         )
-        logits, loss, *grads = result
-        grads = [grad if isinstance(grad, np.ndarray) else grad.numpy() for grad in grads]
-        result = [result[0], result[1], *grads]
 
         return result
 
@@ -317,7 +325,7 @@ def train_model():
             if start_idx + batch_size> num_examples:continue
             end_idx = min(start_idx + batch_size, num_examples)
             X_batch = X_val[start_idx:end_idx, :max_len]
-            X_batch = torch.tensor(X_batch)
+            # X_batch = torch.tensor(X_batch)
             W_Q_val1,W_K_val1,W_V_val1,W_O_val1,W_1_val1,W_2_val1,b_1_val1,b_2_val1=model_weights
             logits = test_evaluator.run({
                 # TODO: Fill in the mapping from variable to tensor
