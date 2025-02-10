@@ -281,8 +281,8 @@ def train_model():
         It returns the logits, loss, and gradients for model weights.
         """
         W_Q1, W_K1, W_V1, W_O1, W_11, W_21, b_11, b_21 = model_weights
-        X_batch=torch.tensor(X_batch, dtype=torch.float64)
-        y_batch=torch.tensor(y_batch, dtype=torch.float64)
+        # X_batch=torch.tensor(X_batch, dtype=torch.float64)
+        # y_batch=torch.tensor(y_batch, dtype=torch.float64)
         result = evaluator.run(
             input_values={
                 # TODO: Fill in the mapping from variable to tensor

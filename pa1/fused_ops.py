@@ -65,10 +65,8 @@ class MatMulLayerNormOp(Op):
         out=mul(value1,sub(value2,value3))
         m1=matmul(out, transpose(x2, dim0=-2, dim1=-1))
         m2= matmul(transpose(x1, dim0=-2, dim1=-1), out)
-        grad_x1 = sum_op(sum_op(m1, dim=-1), dim=0)
-        grad_x2 = sum_op(sum_op(m2, dim=-1), dim=0) 
         
-        return [grad_x1, grad_x2]
+        return [m1, m2]
       
 
 
@@ -101,9 +99,6 @@ class MatMulSoftmaxOp(Op):
         """Return the fused matmul and softmax result."""
         assert len(input_values) == 2
         """TODO: your code here"""
-        # x_shifted = x - np.max(x, axis=1, keepdims=True)
-        # exp_x = np.exp(x_shifted)
-        # return exp_x / np.sum(exp_x, axis=1, keepdims=True)
         x,y=input_values
         multiplication=torch.matmul(x,y)
         dim=node.attrs['dim']
@@ -121,12 +116,12 @@ class MatMulSoftmaxOp(Op):
         
         x1, x2 = node.inputs
         dim = node.attrs['dim']
-        imulti= matmul(x1, x2)
-        out=mul(input, sub(output_grad, sum_op(mul(output_grad,input),dim=node.attrs['dim'],keepdim=True)))
-        m1=matmul(out, transpose(x2, dim0=-1, dim1=-2))
-        m2= matmul(transpose(x1, dim0=-1, dim1=-2), out)
-        grad_x1 = sum_op(sum_op(m1, dim=-1), dim=0)
-        grad_x2 = sum_op(sum_op(m2, dim=-1), dim=0) 
+        multi= matmul(x1, x2)
+        soft= softmax(multi)
+        out=mul(soft, sub(output_grad, sum_op(mul(output_grad,soft),dim=dim,keepdim=True)))
+        m1=matmul(out, transpose(x2, dim0=-2, dim1=-1))
+        m2= matmul(transpose(x1, dim0=-2, dim1=-1), out)
+        
         return [m1,m2]
     
 

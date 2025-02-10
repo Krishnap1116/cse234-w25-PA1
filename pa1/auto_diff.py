@@ -316,7 +316,6 @@ class SumOp(Op):
 
     def compute(self, node: Node, input_values: List[torch.Tensor]) -> torch.Tensor:
         assert len(input_values) == 1
-        x=input_values[0]
         return input_values[0].sum(dim=node.dim, keepdim=node.keepdim)
 
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
@@ -328,6 +327,8 @@ class SumOp(Op):
         else:
             reshape_grad = expand_as_3d(output_grad, node.inputs[0])
             return [reshape_grad]
+
+
 class ExpandAsOp(Op):
     """Op to broadcast a tensor to the shape of another tensor.
     
@@ -437,8 +438,8 @@ class BroadcastOp(Op):
             
         if len(output_shape) > len(input_shape):
             grad = sum_op(grad, dim=list(range(len(output_shape) - len(input_shape))), keepdim=False)
+            
         return [grad]
-
 class DivOp(Op):
     """Op to element-wise divide two nodes."""
 
@@ -665,9 +666,40 @@ class SoftmaxOp(Op):
         """Return softmax of input along specified dimension."""
         assert len(input_values) == 1
         """TODO: your code here"""
+        # denom=torch.exp(sum(input_values))
+        
+        # print(input_values[0].shape)
+        # print(node.attrs['dim'])
+        # x=input_values[0]
+        # rows=input_values[0].shape[0]
+        # cols=input_values[0].shape[1]
+        # total=[]
+        # for i in range(rows):
+        #     temp=x[i]
+        #     # print(temp)
+        #     sum1=0
+        #     for i in temp:
+        #         sum1+= torch.exp(i)
+        #     total.append(sum1)
+        # # print(total)
+
+        # for i in range(rows):
+        #     for j in range(cols):
+        #         input_values[0][i][j]=torch.exp(input_values[0][i][j])/total[i]
+        # return input_values[0]
+   
+        # for i in range(len(input_values[0])):
+        #     dim=node.attrs['dim']
+        #     nume=torch.exp(input_values[0][i])
+        #     denom=torch.sum(nume,dim=dim,keepdim=True)
+        #     output=nume/denom
+        #     input_values[0][i]=output
+        # # print(input_values[0])
+        # return input_values[0]
+        multiplication=input_values[0]
         dim=node.attrs['dim']
-        maxi = torch.max(input_values[0], dim=dim, keepdim=True).values
-        multi = input_values[0] - maxi
+        maxi = torch.max(multiplication, dim=dim, keepdim=True).values
+        multi = multiplication - maxi
         exp_multi = torch.exp(multi)
         softmax = exp_multi / torch.sum(exp_multi, dim=dim, keepdim=True)
         return softmax
@@ -989,7 +1021,6 @@ def gradients(output_node: Node, nodes: List[Node]) -> List[Node]:
     # print(nodes)
     
     output_values = {}
-    # print(nodes)
     x1=nodes[0]
     x2=nodes[1]
     # print('out',output_node)
@@ -1018,8 +1049,8 @@ def gradients(output_node: Node, nodes: List[Node]) -> List[Node]:
                 else:
                     output_values[x]=add(output_values[x],ingrad)
                     # print(add(output_values[x],ingrad))
-        for i in nodes:
-            if i in output_values:
-                output_values[i] = sum_op(output_values[i], dim=0)
+        # for i in nodes:
+        #     if i in output_values:
+        #         output_values[i] = sum_op(output_values[i], dim=0)
     return [ output_values.get(node,zeros_like(node)) for node in nodes]
 
