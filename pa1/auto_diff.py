@@ -779,6 +779,7 @@ class SqrtOp(Op):
         return torch.sqrt(x)
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """TODO: your code here"""
+        return [ div(output_grad ,mul_by_const(sqrt(node.inputs[0]),2))]
 
 class PowerOp(Op):
     """Op to compute element-wise power."""
@@ -799,7 +800,10 @@ class PowerOp(Op):
         return torch.pow(x,y)
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """TODO: your code here"""
-
+        power1=node.attrs['exponent']
+        x=mul_by_const(power(node.inputs[0], (power1 - 1)), power1)
+        out=mul(output_grad, x)
+        return [out]
 class MeanOp(Op):
     """Op to compute mean along specified dimensions.
     
@@ -825,6 +829,11 @@ class MeanOp(Op):
 
     def gradient(self, node: Node, output_grad: Node) -> List[Node]:
         """TODO: your code here"""
+        return[div(output_grad,mean(node.inputs[0],dim=1))]
+
+
+
+
 
 # Create global instances of ops.
 # Your implementation should just use these instances, rather than creating new instances.

@@ -26,7 +26,33 @@ def test_mul():
         ],
         torch.tensor([[-2.80, 1.40, -0.05, 0.00], [0.18, 0.00, -18.56, 9.61]]),
     )
+def test_power():
+    x = ad.Variable("x")
+    y = ad.power(x, 3)  # Raise x to the power of 3
 
+    check_compute_output(
+        y,
+        [torch.tensor([[-1.0, 2.0, 0.5, 3.4], [0.3, 0.0, -5.8, 3.1]])],
+        torch.tensor([[-1.0, 8.0, 0.125, 39.304], [0.027, 0.0, -195.112, 29.791]]),
+    )
+def test_sqrt():
+    x = ad.Variable("x")
+    y = ad.sqrt(x)  # Compute the square root of x
+
+    check_compute_output(
+        y,
+        [torch.tensor([[4.0, 9.0, 16.0, 25.0], [0.0, 1.0, 36.0, 49.0]])],
+        torch.tensor([[2.0, 3.0, 4.0, 5.0], [0.0, 1.0, 6.0, 7.0]]),
+    )
+def test_mean():
+    x = ad.Variable("x")
+    y = ad.mean(x, dim=(1,), keepdim=True)  # Compute the mean along dimension 1
+
+    check_compute_output(
+        y,
+        [torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])],
+        torch.tensor([[2.0], [5.0]]),
+    )
 
 def test_mul_by_const():
     x1 = ad.Variable("x1")
@@ -179,3 +205,6 @@ if __name__ == "__main__":
     test_matmul_3d()
     test_transpose()
     test_broadcast()
+    test_power()
+    test_sqrt()
+    test_mean()

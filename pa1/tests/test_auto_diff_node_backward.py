@@ -238,6 +238,41 @@ def test_broadcast():
         input_values={x: x_val, y_grad: y_grad_val},
         expected_outputs=[torch.tensor([[8.0, 10.0], [12.0, 14.0], [16.0, 18.0]])]
     )
+def test_power():
+    x = ad.Variable("x")
+    y = ad.power(x, 3)  # Raise x to the power of 3
+    y_grad = ad.Variable("y_grad")
+    x_grad = y.op.gradient(y, y_grad)[0]
+    evaluator = ad.Evaluator(eval_nodes=[x_grad])
+
+    x_val = torch.tensor([[-1.0, 2.0, 0.5, 3.4], [0.3, 0.0, -5.8, 3.1]])
+    y_grad_val = torch.ones_like(x_val)
+
+    check_evaluator_output(
+        evaluator,
+        input_values={x: x_val, y_grad: y_grad_val},
+        expected_outputs=[
+            torch.tensor([[3.0, 12.0, 0.75, 34.68], [0.27, 0.0, 100.92, 28.83]])
+        ],
+    )
+def test_sqrt():
+    x = ad.Variable("x")
+    y = ad.sqrt(x)  # Compute the square root of x
+    y_grad = ad.Variable("y_grad")
+    x_grad = y.op.gradient(y, y_grad)[0]
+    evaluator = ad.Evaluator(eval_nodes=[x_grad])
+
+    x_val = torch.tensor([[4.0, 9.0, 16.0, 25.0], [0.0, 1.0, 36.0, 49.0]])
+    y_grad_val = torch.ones_like(x_val)
+
+    check_evaluator_output(
+        evaluator,
+        input_values={x: x_val, y_grad: y_grad_val},
+        expected_outputs=[
+            torch.tensor([[0.25, 0.16666666, 0.125, 0.1], [float('inf'), 0.5, 0.083333336, 0.07142857]])
+        ],
+    )
+
 
 if __name__ == "__main__":
     test_mul()
@@ -248,3 +283,6 @@ if __name__ == "__main__":
     test_matmul()
     test_transpose()
     test_broadcast()
+    test_power()
+    test_sqrt()
+   
